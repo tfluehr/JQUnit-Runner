@@ -1,0 +1,9 @@
+{
+  "_comment": "This file shows an example of a package file.  It is not really needed in this case since order of the files does not matter for Core Addons",
+  "name": "Test Package",
+  "scripts": {
+    "function Bind": "function.bind.js",
+    "JUnit Output": "junit.js",
+    "Deep Extend": "deepExtend"
+  }
+}
