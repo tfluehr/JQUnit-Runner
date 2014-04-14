@@ -108,32 +108,43 @@ QUnitRunner.prototype = {
       console.log("SUCCESS -- Addons loaded.");
     }
     
-    module( "Anonymous_Module" ); // this is here in case there are no modules specified in the tests.
+    module("Anonymous_Module"); // this is here in case there are no modules specified in the tests.
     // currently need a module so we can process the logs correctly.  Will work on changing things once I have everything else working
     
     this.loadTests();
-
+    
     // Execute tests
     QUnit.start();
   },
-  outputModuleStart: function(){},
-  outputTestStart: function(){},
-  outputModuleDone: function(){},
-  outputTestDone: function(){},
+  outputModuleStart: function(){
+    },
+  outputTestStart: function(){
+    },
+  outputModuleDone: function(){
+    },
+  outputTestDone: function(){
+    },
   qUnitBegin: function(details){
-  },
+    },
   qUnitDone: function(details){
     console.log("qUnitDone - ", details.name, " Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime);
     
     phantom.exit(details.failed);
   },
-  qUnitLog: function(){
-    },
+  qUnitLog: function(details){
+    //details = { result , actual, expected, message }
+    console.log(details.result, details.actual, details.expected, details.message, details.source, details.name);
+    if (details.result) {
+      return;
+    }
+    console.log(111111);
+    this.outputLog(details);
+  },
   qUnitModuleDone: function(details){
     if (details.name !== this.currentModule.name) {
       throw new Error("ERROR -- Module names do not match in moduleDone - module.name: '" + module.name + "', currentModule.name: '" + this.currentModule.name + "'.");
     }
-
+    
     details.endTime = new Date();
     
     QUnit.extend(details, this.currentModule);
