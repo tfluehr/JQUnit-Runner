@@ -67,17 +67,17 @@ QUnitRunner.prototype = {
       }
     });
     this.options = options;
-    console.log("SUCCESS -- Initialization and Simple Validation Completed.");
+//    console.log("SUCCESS -- Initialization and Simple Validation Completed.\n");
   },
   run: function(){
     this.loadCoreAddons();
     
     this.validateOptions();
     
-    console.log("INFO -- Loading QUnit...");
+//    console.log("INFO -- Loading QUnit...\n");
     phantom.injectJs(this.options.QUnitFileName);
     QUnit.config.autostart = false;
-    console.log("SUCCESS -- QUnit loaded.");
+//    console.log("SUCCESS -- QUnit loaded.\n");
     
     this.startTests();
   },
@@ -100,12 +100,12 @@ QUnitRunner.prototype = {
     
     // load any addons
     if (this.options.Addons) {
-      console.log("INFO -- Loading Addons");
+//      console.log("INFO -- Loading Addons\n");
       this.processFolder({
         path: this.options.Addons,
         subFolders: this.options.AddonsSub && this.options.AddonsSub == 'true'
       });
-      console.log("SUCCESS -- Addons loaded.");
+//      console.log("SUCCESS -- Addons loaded.\n");
     }
     
     module("Anonymous_Module"); // this is here in case there are no modules specified in the tests.
@@ -127,17 +127,17 @@ QUnitRunner.prototype = {
   qUnitBegin: function(details){
     },
   qUnitDone: function(details){
-    console.log("qUnitDone - ", details.name, " Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime);
+    console.log("All Tests Completed - Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms\n");
     
     phantom.exit(details.failed);
   },
   qUnitLog: function(details){
     //details = { result , actual, expected, message }
-    console.log(details.result, details.actual, details.expected, details.message, details.source, details.name);
+//    console.log(details.result, details.actual, details.expected, details.message, details.source, details.name, "\n");
     if (details.result) {
       return;
     }
-    console.log(111111);
+//    console.log(111111, "\n");
     this.outputLog(details);
   },
   qUnitModuleDone: function(details){
@@ -160,14 +160,14 @@ QUnitRunner.prototype = {
     this.outputModuleStart(details);
   },
   qUnitTestDone: function(details){
-    console.log("qUnitTestDone - ", details.name, " Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime);
+    console.log("Completed Test - '" + details.name + "'\t\t in Module '" + details.module + "' \t\tTotal: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms\n");
     
     details.endTime = new Date();
     
     this.outputTestDone(details);
   },
   qUnitTestStart: function(details){
-    console.log("qUnitTestStart - ", details.name, " Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime);
+//    console.log("qUnitTestStart - ", details.name, " Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "\n");
     
     details.startTime = new Date();
     
@@ -175,7 +175,7 @@ QUnitRunner.prototype = {
   },
   loadTests: function(){
     if (this.fs.isFile(this.options.Test)) {
-      console.log("INFO -- Load test file: " + this.options.Test);
+//      console.log("INFO -- Load test file: " + this.options.Test, "\n");
       if (this.fs.isReadable(this.options.Test)) {
         phantom.injectJs(this.options.Test);
       }
@@ -201,7 +201,7 @@ QUnitRunner.prototype = {
         this["validateOption" + optionName](optionName, this.options[optionName]);
       }
     }, this);
-    console.log("SUCCESS -- Option Validation Complete.");
+//    console.log("SUCCESS -- Option Validation Complete.\n");
   },
   validateOptionQUnitFileName: function(optionName, optionValue){
     if (!this.fs.isFile(optionValue) || !this.fs.isReadable(optionValue)) {
@@ -218,14 +218,14 @@ QUnitRunner.prototype = {
   },
   loadPackage: function(path, filename){
     if (this.fs.isFile(path + filename) && this.fs.isReadable(path + filename)) {
-      console.log("INFO -- Loading JSON Package file: " + path + filename);
+//      console.log("INFO -- Loading JSON Package file: " + path + filename, "\n");
       var fileContents = this.fs.read(path + filename);
       var pkg = JSON.parse(fileContents);
-      console.log("  INFO -- JSON Package file: '" + (pkg.name || (path + filename)) + "' Loaded");
+//      console.log("  INFO -- JSON Package file: '" + (pkg.name || (path + filename)) + "' Loaded\n");
       for (var key in pkg.scripts) {
-        console.log(key);
+//        console.log(key, "\n");
         if (pkg.scripts.hasOwnProperty(key)) {
-          console.log("  INFO -- Injecting: '" + key + "': " + path + pkg.scripts[key]);
+//          console.log("  INFO -- Injecting: '" + key + "': " + path + pkg.scripts[key], "\n");
           phantom.injectJs(path + pkg.scripts[key]);
         }
       }
@@ -240,7 +240,7 @@ QUnitRunner.prototype = {
   processFolder: function(options){
     var path = typeof options === 'string' ? options : options.path;
     path = this.fs.absolute(path) + "/";
-    console.log("INFO -- Processing Folder '" + path + "' " + (options.subFolders ? " With Sub-Folders." : "With Out Sub-Folders."));
+//    console.log("INFO -- Processing Folder '" + path + "' " + (options.subFolders ? " With Sub-Folders." : "With Out Sub-Folders."), "\n");
     if (this.fs.isDirectory(path)) {
       var fileList = this.fs.list(path);
       
@@ -250,7 +250,7 @@ QUnitRunner.prototype = {
       
       fileList.forEach(function(fileName){
         if (!hasPackage && this.endsWith(fileName, options.ext || ".js")) {
-          console.log("INFO -- Loading JS file: " + path + fileName);
+//          console.log("INFO -- Loading JS file: " + path + fileName, "\n");
           phantom.injectJs(path + fileName);
         }
         else if (hasPackage && this.endsWith(fileName, ".json")) {
