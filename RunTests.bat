@@ -1,1 +1,1 @@
-phantomjs\phantomjs.exe "phantomjs_runner\JQUnit-runner.js" --QUnitFileName qunit.js --Addons TestAddons --Test . --junit qunit-results.xml
+phantomjs\phantomjs.exe "phantomjs_runner\JQUnit-runner.js" --Debug true --QUnitFileName qunit.js --OutputProcessor Output/junit.js --Test . --junit qunit-results.xml

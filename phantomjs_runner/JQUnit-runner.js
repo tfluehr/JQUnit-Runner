@@ -71,10 +71,10 @@ QUnitRunner.prototype = {
       if (index % 2 === 0) {
         // even so should be our key name      
         if (arg.substr(0, 2) != "--") {
-          throw new Error("ERROR -- Invalid Argument name '" + arg + "'.  Argument names must begin with '--'");
+          this.error("ERROR -- Invalid Argument name '" + arg + "'.  Argument names must begin with '--'");
         }
         if (args.length <= index + 1) {
-          throw new Error("ERROR -- Missing value for argument '" + arg + "'.");
+          this.error("ERROR -- Missing value for argument '" + arg + "'.");
         }
         
         // passed simple validation so add to our collection.
@@ -83,6 +83,10 @@ QUnitRunner.prototype = {
     });
     this.options = options;
     this.debug("SUCCESS -- Initialization and Simple Validation Completed.");
+  },
+  error: function(msg){
+    console.error(msg);
+    phantom.exit(1);
   },
   debug: function(){
     if (this.options.Debug === "true") {
@@ -99,10 +103,12 @@ QUnitRunner.prototype = {
     phantom.injectJs(this.options.QUnitFileName);
     this.debug("SUCCESS -- QUnit loaded.");
     
-    this.debug("INFO -- Loading Output Processor: " + this.options.OutputProcessor);
-    phantom.injectJs(this.options.OutputProcessor);
-    this.debug("SUCCESS -- Output Processor: " + this.options.OutputProcessor);
-        
+    if (this.options.OutputProcessor) {
+      this.debug("INFO -- Loading Output Processor: " + this.options.OutputProcessor);
+      phantom.injectJs(this.options.OutputProcessor);
+      this.debug("SUCCESS -- Output Processor: " + this.options.OutputProcessor);
+    }
+    
     this.startTests();
   },
   startTests: function(){
@@ -168,7 +174,7 @@ QUnitRunner.prototype = {
   },
   qUnitModuleDone: function(details){
     if (details.name !== this.currentModule.name) {
-      throw new Error("ERROR -- Module names do not match in moduleDone - module.name: '" + module.name + "', currentModule.name: '" + this.currentModule.name + "'.");
+      this.error("ERROR -- Module names do not match in moduleDone - module.name: '" + module.name + "', currentModule.name: '" + this.currentModule.name + "'.");
     }
     
     details.endTime = new Date();
@@ -209,7 +215,7 @@ QUnitRunner.prototype = {
         phantom.injectJs(this.options.Test);
       }
       else {
-        throw new Error("ERROR -- \"" + this.options.Test + "\" can not be read.");
+        this.error("ERROR -- \"" + this.options.Test + "\" can not be read.");
       }
     }
     else if (this.fs.isDirectory(this.options.Test)) {
@@ -218,13 +224,14 @@ QUnitRunner.prototype = {
         ext: ".Test.js"
       });
     }
+    this.debug('INFO -- Tests loaded');
   },
   validateOptions: function(){
     // Required Options
     ["QUnitFileName", "Test"].forEach(function(optionName, index){
       optionName = optionName;
       if (!this.options[optionName]) {
-        throw new Error("ERROR -- Missing REQUIRED option '" + optionName + "'. Use the format \"--" + optionName + " optionValue\".");
+        this.error("ERROR -- Missing REQUIRED option '" + optionName + "'. Use the format \"--" + optionName + " optionValue\".");
       }
       if (typeof this["validateOption" + optionName] == 'function') {
         this["validateOption" + optionName](optionName, this.options[optionName]);
@@ -234,15 +241,15 @@ QUnitRunner.prototype = {
   },
   validateOptionQUnitFileName: function(optionName, optionValue){
     if (!this.fs.isFile(optionValue) || !this.fs.isReadable(optionValue)) {
-      throw new Error("ERROR -- \"" + optionValue + "\" does not point to a valid file or the file can not be read for option '" + optionName + "'.");
+      this.error("ERROR -- \"" + optionValue + "\" does not point to a valid file or the file can not be read for option '" + optionName + "'.");
     }
   },
   validateOptionTest: function(optionName, optionValue){
     if (!this.fs.isFile(optionValue) && !this.fs.isDirectory(optionValue)) {
-      throw new Error("ERROR -- \"" + optionName + "\" must point to a valid file or directory. '" + this.options.tests + "' cannot be found.");
+      this.error("ERROR -- \"" + optionName + "\" must point to a valid file or directory. '" + this.options.tests + "' cannot be found.");
     }
     else if (!this.fs.isReadable(optionValue)) {
-      throw new Error("ERROR -- Cannot read file or directory '" + optionValue + "' for option '" + optionName + "'.");
+      this.error("ERROR -- Cannot read file or directory '" + optionValue + "' for option '" + optionName + "'.");
     }
   },
   loadPackage: function(path, filename){
@@ -259,7 +266,7 @@ QUnitRunner.prototype = {
       }
     }
     else {
-      throw new Error("ERROR -- \"" + filename + "\" does not point to a valid file or the file can not be read for option.");
+      this.error("ERROR -- \"" + filename + "\" does not point to a valid file or the file can not be read for option.");
     }
   },
   endsWith: function(str, suffix){
@@ -267,26 +274,31 @@ QUnitRunner.prototype = {
   },
   processFolder: function(options){
     var path = typeof options === 'string' ? options : options.path;
-    path = this.fs.absolute(path) + "/";
     this.debug("INFO -- Processing Folder '" + path + "' " + (options.subFolders ? " With Sub-Folders." : "With Out Sub-Folders."));
     if (this.fs.isDirectory(path)) {
+      path = this.fs.absolute(path) + "/";
       var fileList = this.fs.list(path);
       
-      var hasPackage = fileList.some(function(fileName){
-        return this.endsWith(fileName, ".json");
+      var hasPackage = fileList.some(function(filename){
+        return this.endsWith(filename, ".json");
       }, this);
       
-      fileList.forEach(function(fileName){
-        if (!hasPackage && this.endsWith(fileName, options.ext || ".js")) {
-          this.debug("INFO -- Loading JS file: " + path + fileName);
-          phantom.injectJs(path + fileName);
+      fileList.forEach(function(filename){
+        if (!hasPackage && this.endsWith(filename, options.ext || ".js")) {
+          this.debug("INFO -- Loading JS file: " + path + filename);
+          if (this.fs.isFile(path + filename) && this.fs.isReadable(path + filename)) {
+            phantom.injectJs(path + filename);
+          }
+          else {
+            this.error("ERROR -- Cannot read file or directory '" + path + filename + "'.");
+          }
         }
-        else if (hasPackage && this.endsWith(fileName, ".json")) {
-          this.loadPackage(path, fileName);
+        else if (hasPackage && this.endsWith(filename, ".json")) {
+          this.loadPackage(path, filename);
         }
-        else if (options.subFolders && fileName !== "." && fileName !== ".." && this.fs.isDirectory(path + fileName)) {
+        else if (options.subFolders && filename !== "." && filename !== ".." && this.fs.isDirectory(path + filename)) {
           this.processFolder({
-            path: path + fileName,
+            path: path + filename,
             subFolders: options.subFolders,
             ext: options.ext
           });
@@ -294,7 +306,7 @@ QUnitRunner.prototype = {
       }, this);
     }
     else {
-      throw new Error("ERROR -- Cannot read directory '" + path + "'.");
+      this.error("ERROR -- Cannot read directory '" + path + "'.");
     }
   },
   loadCoreAddons: function(){
