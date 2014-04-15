@@ -15,6 +15,20 @@
  * --Addons: Path to any JS or Package file(s) to load before executing tests
  * --AddonsSub: 'true' to process sub folders
  * --Debug: 'true' to output console messages
+ *
+ * --OutputProcessor: file to load that will process the output of the runner for creating any format needed.
+ */
+/*
+ * OutputProcessor
+ *
+ * methods correspond to QUnit's callbacks http://api.qunitjs.com/category/callbacks/
+ * 
+ * arguments passed to the functions are the same as QUnit with the addition of startTime/endTime properties for module/test start/end
+ *
+ * Methods that it can use:
+ * 
+ *  outputBegin, outputModuleStart, outputModuleDone, outputTestStart, outputTestDone, outputDone
+ *
  */
 /*
  * catch any unhandled errors and report to console.
@@ -83,9 +97,12 @@ QUnitRunner.prototype = {
     
     this.debug("INFO -- Loading QUnit...");
     phantom.injectJs(this.options.QUnitFileName);
-    QUnit.config.autostart = false;
     this.debug("SUCCESS -- QUnit loaded.");
     
+    this.debug("INFO -- Loading Output Processor: " + this.options.OutputProcessor);
+    phantom.injectJs(this.options.OutputProcessor);
+    this.debug("SUCCESS -- Output Processor: " + this.options.OutputProcessor);
+        
     this.startTests();
   },
   startTests: function(){
@@ -97,7 +114,7 @@ QUnitRunner.prototype = {
     QUnit.config.autostart = false;
     
     // binding Callbacks
-    QUnit.begin(this.qUnitBegin.bind(this));
+    //    QUnit.begin(this.qUnitBegin.bind(this)); // does not fire so call directly below
     QUnit.done(this.qUnitDone.bind(this));
     QUnit.log(this.qUnitLog.bind(this));
     QUnit.moduleDone(this.qUnitModuleDone.bind(this));
@@ -117,12 +134,14 @@ QUnitRunner.prototype = {
     
     module("Anonymous_Module"); // this is here in case there are no modules specified in the tests.
     // currently need a module so we can process the logs correctly.  Will work on changing things once I have everything else working
-    
+    this.qUnitBegin(); // call directly because qunits callback does not fire. 
     this.loadTests();
     
     // Execute tests
     QUnit.start();
   },
+  outputBegin: function(){
+    },
   outputModuleStart: function(){
     },
   outputTestStart: function(){
@@ -133,8 +152,9 @@ QUnitRunner.prototype = {
     },
   outputDone: function(){
     },
-  qUnitBegin: function(details){
-    },
+  qUnitBegin: function(){
+    this.outputBegin();
+  },
   qUnitDone: function(details){
     this.debug("All Tests Completed - Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms");
     
