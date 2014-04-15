@@ -82,6 +82,9 @@ QUnitRunner.prototype = {
       }
     });
     this.options = options;
+
+    this.loadCoreAddons();
+    
     this.debug("SUCCESS -- Initialization and Simple Validation Completed.");
   },
   error: function(msg){
@@ -95,8 +98,6 @@ QUnitRunner.prototype = {
     }
   },
   run: function(){
-    this.loadCoreAddons();
-    
     this.validateOptions();
     
     this.debug("INFO -- Loading QUnit...");
@@ -163,7 +164,7 @@ QUnitRunner.prototype = {
   },
   qUnitDone: function(details){
     this.debug("All Tests Completed - Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms");
-    
+    details.name = this.options.Test;
     this.outputDone(details);
     
     phantom.exit(details.failed);
