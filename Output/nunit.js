@@ -53,7 +53,8 @@ QUnit.extend(QUnitRunner.prototype, {
   },
   outputDone: function(details){
     var env = this.system.env;
-
+    var os = this.system.os;
+    
     if (this.fs.isDirectory(details.name)) {
       details.name = this.fs.absolute(details.name);
     }
@@ -62,7 +63,7 @@ QUnit.extend(QUnitRunner.prototype, {
     output.push('<?xml version="1.0" encoding="utf-8" standalone="no"?>');
     output.pushReplace('<test-results name="{0}" total="{1}" failures="{2}">', details.name, details.total, details.failed);
     //nunit-version="2.6.0.12035" clr-version="2.0.50727.4963" 
-    output.pushReplace('<environment platform="{0}" machine-name="{1}" user="{2}" user-domain="{3}" />', env.OS, env.COMPUTERNAME, env.USERNAME, env.USERDOMAIN);
+    output.pushReplace('<environment platform="{0} {1} {2}" machine-name="{3}" user="{4}" user-domain="{5}" />', os.name, os.version, os.architecture, env.COMPUTERNAME, env.USERNAME, env.USERDOMAIN);
 
     output = output.concat(this.globalOutput);
     
