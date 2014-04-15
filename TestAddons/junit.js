@@ -2,25 +2,29 @@
  * This needs a lot of cleanup and reorg
  */
 QUnit.extend(QUnitRunner.prototype, {
-  outputCache: {
-    suite: [],
-    tests: [],
-    currentTest: []
-  },
+  globalOutput: [],
   outputModuleStart: function(module){
-    this.outputCache.tests = [];
+    this.currentModuleOutput = [];
+    this.currentModuleTestsOutput = [];
   },
   outputModuleDone: function(module){
-    this.outputCache.suite.push('\t<testsuite name="' + module.name + '" errors="0" failures="' + module.failed + '" tests="' + module.total + '" time="' + (module.endTime - module.startTime) / 1000 + '">');
-    this.outputCache.tests.forEach(function(testXML){
-      this.outputCache.suite.push(testXML);
-    }, this);
-    this.outputCache.suite.push('\t</testsuite>');
+    this.currentModuleOutput.push('\t<testsuite name="' + module.name + '" errors="0" failures="' + module.failed + '" tests="' + module.total + '" time="' + (module.endTime - module.startTime) / 1000 + '">');
+    
+    this.currentModuleOutput = this.currentModuleOutput.concat(this.currentModuleTestsOutput);
+    
+    this.currentModuleOutput.push('\t</testsuite>');
+    
+    this.globalOutput = this.globalOutput.concat(this.currentModuleOutput);
   },
   outputTestStart: function(test){
-    this.outputCache.currentTest = [];
+    this.currentTestOutput = [];
+    this.testFailures = [];
   },
   outputLog: function(details){
+    if (details.result) {
+      // currently don't log success?
+      return;
+    }
     var message = details.message || "";
     if (details.expected) {
       if (message) {
@@ -28,79 +32,32 @@ QUnit.extend(QUnitRunner.prototype, {
       }
       message += "expected: " + details.expected + ", but was: " + details.actual;
     }
-    var xml = '<failure type="failed" message="' + details.message.replace(/ - \{((.|\n)*)\}/, "") + '"/>\n';
-    
-    this.outputCache.currentTest.push(xml);
+    this.testFailures.push('\t\t\t<failure type="failed" message="' + details.message.replace(/ - \{((.|\n)*)\}/, "") + '">');
+    if (details.source){
+      this.testFailures.push(details.source);
+    }
+    this.testFailures.push('\t\t\t</failure>');
   },
   outputTestDone: function(test){
-    var cache = [];
-    cache.push('\t\t<testcase classname="' + test.module + '" name="' + test.name + '" time="' + (test.endDate - test.startDate) / 1000 + '">');
-    for (var i = 0; i < this.outputCache.currentTest.length; i++) {
-      cache.push("\t\t\t" + this.outputCache.currentTest[i]);
-    }
-    cache.push('\t\t</testcase>\n');
+    this.currentTestOutput.push('\t\t<testcase classname="' + test.module + '" name="' + test.name + '" time="' + (test.endTime - test.startTime) / 1000 + '">');
     
-    this.outputCache.tests.push(cache.join(''));
+    this.currentTestOutput = this.currentTestOutput.concat(this.testFailures);
+
+    this.currentTestOutput.push('\t\t</testcase>');
+    
+    this.currentModuleTestsOutput = this.currentModuleTestsOutput.concat(this.currentTestOutput);
+  },
+  outputDone: function(details){
+    var output = [];
+    output.push('<?xml version="1.0" encoding="UTF-8"?>');
+    output.push('<testsuites name="testsuites">');
+    
+    output = output.concat(this.globalOutput);
+    
+    output.push('</testsuites>');
+    
+    var xml = output.join("\n");
+    
+    this.fs.write(this.options.junit, xml, "w");
   }
 });
-
-//QUnitRunner.prototype.outputCache = {
-//  suite: [],
-//  tests: [],
-//  currentTest: []
-//};
-//
-//QUnitRunner.prototype.outputModuleStart = function(module){
-//  console.log('m start');
-//  // clear cache for next module
-//  this.outputCache.tests = [];
-//};
-//
-//QUnitRunner.prototype.outputModuleDone = function(module){
-//  console.log("INFO -- Module Done Output: '" + module.name + "'.");
-//  // context = { name, failed, passed, total }
-//  this.outputCache.suite.push('\t<testsuite name="' + module.name + '" errors="0" failures="' + module.failed + '" tests="' + module.total + '" time="' + (module.endTime - module.startTime) / 1000 + '">');
-//  this.outputCache.tests.forEach(function(testXML){
-//    this.outputCache.suite.push(testXML);
-//  }, this);
-//  this.outputCache.suite.push('\t</testsuite>');
-//};
-//
-//QUnitRunner.prototype.outputTestStart = function(test){
-//  console.log('t start');
-//  this.outputCache.currentTest = [];
-//  // clear cache for next module
-//  //this.outputCache.tests = [];
-//};
-//QUnitRunner.prototype.outputLog = function(details){
-//  console.log('log');
-//  var message = details.message || "";
-//  if (details.expected) {
-//    if (message) {
-//      message += ", ";
-//    }
-//    message += "expected: " + details.expected + ", but was: " + details.actual;
-//  }
-//  console.log(134123423);
-//  var xml = '<failure type="failed" message="' + details.message.replace(/ - \{((.|\n)*)\}/, "") + '"/>\n';
-//  
-//  this.outputCache.currentTest.push(xml);
-//};
-//QUnitRunner.prototype.outputTestDone = function(test){
-//  console.log('t end');
-//  var cache = [];
-//  cache.push('\t\t<testcase classname="' + test.module + '" name="' + test.name + '" time="' + (test.endDate - test.startDate) / 1000 + '">');
-//  //  if (result.failed) {
-//  for (var i = 0; i < this.outputCache.currentTest.length; i++) {
-//    cache.push("\t\t\t" + this.outputCache.currentTest[i]);
-//  }
-//  
-//  //  }
-//  //  else {
-//  //    xml += '/>\n';
-//  //  }
-//  cache.push('\t\t</testcase>\n');
-//  
-//  console.log("**********************");
-//  this.outputCache.tests.push(cache.join(''));
-//};

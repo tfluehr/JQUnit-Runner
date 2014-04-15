@@ -14,6 +14,7 @@
  *
  * --Addons: Path to any JS or Package file(s) to load before executing tests
  * --AddonsSub: 'true' to process sub folders
+ * --Debug: 'true' to output console messages
  */
 /*
  * catch any unhandled errors and report to console.
@@ -67,17 +68,23 @@ QUnitRunner.prototype = {
       }
     });
     this.options = options;
-//    console.log("SUCCESS -- Initialization and Simple Validation Completed.\n");
+    this.debug("SUCCESS -- Initialization and Simple Validation Completed.");
+  },
+  debug: function(){
+    if (this.options.Debug === "true") {
+      var val = Array.prototype.slice.call(arguments, 0).join(" ");
+      console.log(val + "\n");
+    }
   },
   run: function(){
     this.loadCoreAddons();
     
     this.validateOptions();
     
-//    console.log("INFO -- Loading QUnit...\n");
+    this.debug("INFO -- Loading QUnit...");
     phantom.injectJs(this.options.QUnitFileName);
     QUnit.config.autostart = false;
-//    console.log("SUCCESS -- QUnit loaded.\n");
+    this.debug("SUCCESS -- QUnit loaded.");
     
     this.startTests();
   },
@@ -100,12 +107,12 @@ QUnitRunner.prototype = {
     
     // load any addons
     if (this.options.Addons) {
-//      console.log("INFO -- Loading Addons\n");
+      this.debug("INFO -- Loading Addons");
       this.processFolder({
         path: this.options.Addons,
         subFolders: this.options.AddonsSub && this.options.AddonsSub == 'true'
       });
-//      console.log("SUCCESS -- Addons loaded.\n");
+      this.debug("SUCCESS -- Addons loaded.");
     }
     
     module("Anonymous_Module"); // this is here in case there are no modules specified in the tests.
@@ -124,20 +131,19 @@ QUnitRunner.prototype = {
     },
   outputTestDone: function(){
     },
+  outputDone: function(){
+    },
   qUnitBegin: function(details){
     },
   qUnitDone: function(details){
-    console.log("All Tests Completed - Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms\n");
+    this.debug("All Tests Completed - Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms");
+    
+    this.outputDone(details);
     
     phantom.exit(details.failed);
   },
   qUnitLog: function(details){
-    //details = { result , actual, expected, message }
-//    console.log(details.result, details.actual, details.expected, details.message, details.source, details.name, "\n");
-    if (details.result) {
-      return;
-    }
-//    console.log(111111, "\n");
+    this.debug(details.result, details.actual, details.expected, details.message, details.source, details.name);
     this.outputLog(details);
   },
   qUnitModuleDone: function(details){
@@ -160,22 +166,25 @@ QUnitRunner.prototype = {
     this.outputModuleStart(details);
   },
   qUnitTestDone: function(details){
-    console.log("Completed Test - '" + details.name + "'\t\t in Module '" + details.module + "' \t\tTotal: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms\n");
+    this.debug("Completed Test - '" + details.name + "'\t\t in Module '" + details.module + "' \t\tTotal: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms");
     
     details.endTime = new Date();
+    
+    QUnit.extend(details, this.currentTest);
     
     this.outputTestDone(details);
   },
   qUnitTestStart: function(details){
-//    console.log("qUnitTestStart - ", details.name, " Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "\n");
-    
+    this.debug("qUnitTestStart - ", details.name, " Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime);
     details.startTime = new Date();
+    
+    this.currentTest = details;
     
     this.outputTestStart(details);
   },
   loadTests: function(){
     if (this.fs.isFile(this.options.Test)) {
-//      console.log("INFO -- Load test file: " + this.options.Test, "\n");
+      this.debug("INFO -- Load test file: " + this.options.Test);
       if (this.fs.isReadable(this.options.Test)) {
         phantom.injectJs(this.options.Test);
       }
@@ -201,7 +210,7 @@ QUnitRunner.prototype = {
         this["validateOption" + optionName](optionName, this.options[optionName]);
       }
     }, this);
-//    console.log("SUCCESS -- Option Validation Complete.\n");
+    this.debug("SUCCESS -- Option Validation Complete.");
   },
   validateOptionQUnitFileName: function(optionName, optionValue){
     if (!this.fs.isFile(optionValue) || !this.fs.isReadable(optionValue)) {
@@ -218,14 +227,13 @@ QUnitRunner.prototype = {
   },
   loadPackage: function(path, filename){
     if (this.fs.isFile(path + filename) && this.fs.isReadable(path + filename)) {
-//      console.log("INFO -- Loading JSON Package file: " + path + filename, "\n");
+      this.debug("INFO -- Loading JSON Package file: " + path + filename);
       var fileContents = this.fs.read(path + filename);
       var pkg = JSON.parse(fileContents);
-//      console.log("  INFO -- JSON Package file: '" + (pkg.name || (path + filename)) + "' Loaded\n");
+      this.debug("  INFO -- JSON Package file: '" + (pkg.name || (path + filename)) + "' Loaded");
       for (var key in pkg.scripts) {
-//        console.log(key, "\n");
         if (pkg.scripts.hasOwnProperty(key)) {
-//          console.log("  INFO -- Injecting: '" + key + "': " + path + pkg.scripts[key], "\n");
+          this.debug("  INFO -- Injecting: '" + key + "': " + path + pkg.scripts[key]);
           phantom.injectJs(path + pkg.scripts[key]);
         }
       }
@@ -240,7 +248,7 @@ QUnitRunner.prototype = {
   processFolder: function(options){
     var path = typeof options === 'string' ? options : options.path;
     path = this.fs.absolute(path) + "/";
-//    console.log("INFO -- Processing Folder '" + path + "' " + (options.subFolders ? " With Sub-Folders." : "With Out Sub-Folders."), "\n");
+    this.debug("INFO -- Processing Folder '" + path + "' " + (options.subFolders ? " With Sub-Folders." : "With Out Sub-Folders."));
     if (this.fs.isDirectory(path)) {
       var fileList = this.fs.list(path);
       
@@ -250,7 +258,7 @@ QUnitRunner.prototype = {
       
       fileList.forEach(function(fileName){
         if (!hasPackage && this.endsWith(fileName, options.ext || ".js")) {
-//          console.log("INFO -- Loading JS file: " + path + fileName, "\n");
+          this.debug("INFO -- Loading JS file: " + path + fileName);
           phantom.injectJs(path + fileName);
         }
         else if (hasPackage && this.endsWith(fileName, ".json")) {
