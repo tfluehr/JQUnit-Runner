@@ -3,6 +3,14 @@
  */
 QUnit.extend(QUnitRunner.prototype, {
   globalOutput: [],
+  outputGlobalStart: function(){
+    // executed prior to any test running or folder being processed
+  },
+//  outputSuiteStart: function(){
+//    // will execute once for each folder processed when the folder has no json files and just js files
+//    // otherwise will execute once per json file
+//    // will not 
+//  },
   outputModuleStart: function(module){
     this.currentModuleOutput = [];
     this.currentModuleTestsOutput = [];
@@ -71,5 +79,8 @@ QUnit.extend(QUnitRunner.prototype, {
     
     var xml = output.join("\n");
     this.fs.write(this.options.junit, xml, "w");
+  },
+  outputGlobalDone: function(){
+    // executed after all tests have been executed
   }
 });

@@ -22,11 +22,11 @@
  * OutputProcessor
  *
  * methods correspond to QUnit's callbacks http://api.qunitjs.com/category/callbacks/
- * 
+ *
  * arguments passed to the functions are the same as QUnit with the addition of startTime/endTime properties for module/test start/end
  *
  * Methods that it can use:
- * 
+ *
  *  outputBegin, outputModuleStart, outputModuleDone, outputTestStart, outputTestDone, outputDone
  *
  */
@@ -82,7 +82,7 @@ QUnitRunner.prototype = {
       }
     });
     this.options = options;
-
+    
     this.loadCoreAddons();
     
     this.debug("SUCCESS -- Initialization and Simple Validation Completed.");
@@ -147,6 +147,34 @@ QUnitRunner.prototype = {
     // Execute tests
     QUnit.start();
   },
+  waitFor: function(testFx, onReady, timeOutMillis){
+    // pulled from phantomjs example
+    var maxtimeOutMillis = timeOutMillis ? timeOutMillis : 3000; //< Default Max Timout is 3s
+    var start = new Date().getTime();
+    var condition = false;
+    var interval = setInterval(function(){
+      if ((new Date().getTime() - start < maxtimeOutMillis) && !condition) {
+        // If not time-out yet and condition not yet fulfilled
+        condition = (typeof(testFx) === "string" ? eval(testFx) : testFx()); //< defensive code
+      }
+      else {
+        if (!condition) {
+          // If condition still not fulfilled (timeout but condition is 'false')
+          this.debug("'waitFor()' timeout");
+          phantom.exit(1);
+        }
+        else {
+          // Condition fulfilled (timeout and/or condition is 'true')
+          this.debug("'waitFor()' finished in " + (new Date().getTime() - start) + "ms.");
+          typeof(onReady) === "string" ? eval(onReady) : onReady(); //< Do what it's supposed to do once the condition is fulfilled
+          clearInterval(interval); //< Stop this interval
+        }
+      }
+    }, 250); //< repeat check every 250ms
+  },
+  outputGlobalStart: function(){
+    
+  },
   outputBegin: function(){
     },
   outputModuleStart: function(){
@@ -161,6 +189,9 @@ QUnitRunner.prototype = {
     },
   qUnitBegin: function(){
     this.outputBegin();
+  },
+  outputGlobalDone: function(){
+    
   },
   qUnitDone: function(details){
     this.debug("All Tests Completed - Total: ", details.total, " Failed: ", details.failed, " Passed: ", details.passed, " Runtime: ", details.runtime, "ms");
